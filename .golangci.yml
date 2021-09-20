@@ -1,0 +1,17 @@
+# This file contains all available configuration options
+# with their default values.
+# See https://golangci-lint.run/usage/configuration/#config-file
+
+linters:
+  enable-all: true
+  disable:
+    - ifshort
+    - gomnd
+    - goerr113
+    - exhaustivestruct
+    - forbidigo
+    - godox
+  fast: false
+
+issues:
+  fix: true
