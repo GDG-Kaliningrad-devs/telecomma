@@ -1,10 +1,17 @@
-package log
+package bot
 
 import (
 	"log"
 
 	"gopkg.in/tucnak/telebot.v2"
 )
+
+func Respond(b *telebot.Bot, c *telebot.Callback, resp *telebot.CallbackResponse) {
+	err := b.Respond(c, resp)
+	if err != nil {
+		log.Println(err)
+	}
+}
 
 func Send(b *telebot.Bot, to telebot.Recipient, what interface{}, reply *telebot.ReplyMarkup) {
 	_, err := b.Send(to, what, reply)

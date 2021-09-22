@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+func Name(user *telebot.User) string {
+	return strings.Join([]string{user.FirstName, user.LastName}, " ")
+}
+
 func validateName(s string) (string, error) {
 	s = strings.TrimSpace(s)
 

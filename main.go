@@ -25,7 +25,7 @@ func main() {
 		return
 	}
 
-	err = db.AutoMigrate(&user.User{})
+	err = db.AutoMigrate(&user.User{}, &user.Contact{})
 	if err != nil {
 		log.Fatal(err)
 
