@@ -21,14 +21,17 @@ const (
 
 func RegisterHandlers(b *telebot.Bot, db *gorm.DB) {
 	b.Handle(telebot.OnText, search(b, db))
-	b.Handle(&telebot.InlineButton{Unique: approve}, requestApprove(b, db))
-	b.Handle(&telebot.InlineButton{Unique: decline}, requestDecline(b, db))
+	b.Handle(&telebot.InlineButton{Unique: approve}, response(b, db, true))
+	b.Handle(&telebot.InlineButton{Unique: decline}, response(b, db, false))
 	b.Handle(telebot.OnCallback, requestContact(b, db))
 }
 
 func search(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
 	return func(m *telebot.Message) {
-		// todo: assert 3 more symbols
+		if len(m.Text) < 4 {
+			bot.Send(b, m.Sender, text.SearchErrMinSymbols, &telebot.ReplyMarkup{})
+		}
+
 		var users []user.User
 
 		err := db.Find(&users, "name like '%"+m.Text+"%'").Error
@@ -37,7 +40,11 @@ func search(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
 		}
 
 		if len(users) == 0 {
-			bot.Send(b, m.Sender, text.SearchNotFound, &telebot.ReplyMarkup{})
+			bot.Send(b, m.Sender, text.SearchErrNoResults, &telebot.ReplyMarkup{})
+		}
+
+		if len(users) > 5 {
+			bot.Send(b, m.Sender, text.SearchErrToManyResults, &telebot.ReplyMarkup{})
 		}
 
 		var keyboard [][]telebot.InlineButton
@@ -64,8 +71,8 @@ func requestContact(b *telebot.Bot, db *gorm.DB) func(c *telebot.Callback) {
 	return func(c *telebot.Callback) {
 		userID := c.Sender.ID
 
-		contactID, err := getContactID(b, c)
-		if err != nil {
+		contactID, has := getContactID(b, c)
+		if !has {
 			return
 		}
 
@@ -89,15 +96,17 @@ func requestContact(b *telebot.Bot, db *gorm.DB) func(c *telebot.Callback) {
 		exist = assertNoContact(
 			b, db, c.Sender, contactID, userID,
 			func(contact user.Contact) {
-				// todo: implement "you ignored it, want to approve?"
-				bot.Err(b, c.Sender, gorm.ErrNotImplemented)
+				bot.Respond(b, c, &telebot.CallbackResponse{
+					Text:      text.ContactRequestErrIgnored,
+					ShowAlert: true,
+				})
 			},
 		)
 		if exist {
 			return
 		}
 
-		err = db.Create(user.NewContact(userID, contactID)).Error
+		err := db.Create(user.NewContact(userID, contactID)).Error
 		if err != nil {
 			bot.Err(b, c.Sender, err)
 		}
@@ -129,22 +138,54 @@ func requestContact(b *telebot.Bot, db *gorm.DB) func(c *telebot.Callback) {
 	}
 }
 
-func requestApprove(b *telebot.Bot, db *gorm.DB) func(c *telebot.Callback) {
+func response(b *telebot.Bot, db *gorm.DB, accepted bool) func(c *telebot.Callback) {
 	return func(c *telebot.Callback) {
-		// todo: assert registered
-		// todo: approve request
-		bot.Respond(b, c, &telebot.CallbackResponse{
-			Text: text.ContactRequestSuccess,
-		})
-	}
-}
+		userID := c.Sender.ID
 
-func requestDecline(b *telebot.Bot, db *gorm.DB) func(c *telebot.Callback) {
-	return func(c *telebot.Callback) {
-		// todo: assert registered
-		// todo: decline request
+		contactID, has := getContactID(b, c)
+		if !has {
+			return
+		}
+
+		contact := user.Contact{SenderID: contactID, ContactID: userID}
+
+		err := db.First(&contact).Error
+		if err != nil {
+			bot.Respond(b, c, &telebot.CallbackResponse{
+				Text: err.Error(),
+			})
+
+			return
+		}
+
+		if contact.Response != user.None {
+			bot.Respond(b, c, &telebot.CallbackResponse{
+				Text: text.ContactResponseErrSent,
+			})
+
+			return
+		}
+
+		err = db.Save(contact.Respond(accepted)).Error
+		if err != nil {
+			bot.Respond(b, c, &telebot.CallbackResponse{
+				Text: err.Error(),
+			})
+
+			return
+		}
+
+		receiver := &telebot.User{ID: contactID}
+
+		if accepted {
+			bot.Send(b, c.Sender, text.ContactRequestSuccess)
+			bot.Send(b, receiver, text.ContactRequestSuccess)
+		} else {
+			bot.Send(b, receiver, text.ContactRequestDeclined)
+		}
+
 		bot.Respond(b, c, &telebot.CallbackResponse{
-			Text: text.ContactRequestDeclined,
+			Text: text.ActionDone,
 		})
 	}
 }
@@ -175,20 +216,10 @@ func assertNoContact(
 	return true
 }
 
-func getContactID(b *telebot.Bot, c *telebot.Callback) (int, error) {
+func getContactID(b *telebot.Bot, c *telebot.Callback) (int, bool) {
 	data := strings.Split(c.Data, "|")
 
-	if len(data) != 2 {
-		fmt.Println(c.Data)
-
-		bot.Respond(b, c, &telebot.CallbackResponse{
-			Text: text.ContactRequestNotID,
-		})
-
-		return -1, errors.New("no id in data")
-	}
-
-	userID, err := strconv.Atoi(data[1])
+	userID, err := strconv.Atoi(data[len(data)-1])
 	if err != nil {
 		fmt.Println(c.Data)
 
@@ -196,8 +227,8 @@ func getContactID(b *telebot.Bot, c *telebot.Callback) (int, error) {
 			Text: text.ContactRequestNotID,
 		})
 
-		return 0, err
+		return 0, false
 	}
 
-	return userID, err
+	return userID, true
 }

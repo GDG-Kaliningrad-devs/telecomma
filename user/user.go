@@ -2,6 +2,8 @@ package user
 
 import (
 	"time"
+
+	"gopkg.in/tucnak/telebot.v2"
 )
 
 type User struct {

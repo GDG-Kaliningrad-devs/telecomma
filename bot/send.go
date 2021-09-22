@@ -13,8 +13,15 @@ func Respond(b *telebot.Bot, c *telebot.Callback, resp *telebot.CallbackResponse
 	}
 }
 
-func Send(b *telebot.Bot, to telebot.Recipient, what interface{}, reply *telebot.ReplyMarkup) {
-	_, err := b.Send(to, what, reply)
+func Send(b *telebot.Bot, to telebot.Recipient, what interface{}, reply ...*telebot.ReplyMarkup) {
+	var err error
+
+	if len(reply) == 0 {
+		_, err = b.Send(to, what)
+	} else {
+		_, err = b.Send(to, what, reply[0])
+	}
+
 	if err != nil {
 		log.Println(err)
 	}

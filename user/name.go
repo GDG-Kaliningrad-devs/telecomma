@@ -3,6 +3,8 @@ package user
 import (
 	"errors"
 	"strings"
+
+	"gopkg.in/tucnak/telebot.v2"
 )
 
 func Name(user *telebot.User) string {
