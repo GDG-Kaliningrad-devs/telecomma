@@ -30,6 +30,8 @@ func search(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
 	return func(m *telebot.Message) {
 		if len(m.Text) < 4 {
 			bot.Send(b, m.Sender, text.SearchErrMinSymbols, &telebot.ReplyMarkup{})
+
+			return
 		}
 
 		var users []user.User
@@ -41,10 +43,14 @@ func search(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
 
 		if len(users) == 0 {
 			bot.Send(b, m.Sender, text.SearchErrNoResults, &telebot.ReplyMarkup{})
+
+			return
 		}
 
 		if len(users) > 5 {
 			bot.Send(b, m.Sender, text.SearchErrToManyResults, &telebot.ReplyMarkup{})
+
+			return
 		}
 
 		var keyboard [][]telebot.InlineButton
