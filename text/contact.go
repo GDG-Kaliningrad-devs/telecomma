@@ -17,8 +17,10 @@ const (
 	ContactRequestErrSent       = `Вы уже отправляли запрос`
 	ContactRequestErrIgnored    = `Собеседник уже отправлял запрос вам`
 	ContactResponseErrSent      = `Вы уже ответили на запрос`
-	contactRequestSuccess       = `%s @%s и %s @%s теперь дружбаны`
-	contactRequestDeclined      = `%s отклонил запрос. Общайтесь по-настоящему и спрашивайте разрешения`
+	contactRequestSuccess       = `#contact
+%s @%s и %s @%s теперь дружбаны`
+	contactRequestDeclined = `%s отклонил запрос. Общайтесь по-настоящему и спрашивайте разрешения`
+	ContactSetImportantBtn = `Хочу пообщаться после конфы`
 )
 
 func ContactRequest(user, username string) string {

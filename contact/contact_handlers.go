@@ -14,9 +14,11 @@ import (
 )
 
 const (
-	accept     = "rapprove"
-	decline    = "rdecline"
-	fakeAccept = "rfake_accept"
+	accept             = "rapprove"
+	decline            = "rdecline"
+	fakeAccept         = "rfake_accept"
+	senderInterested   = "rset_sender_interested"
+	receiverInterested = "rset_receiver_interested"
 )
 
 func RegisterHandlers(b *telebot.Bot, db *gorm.DB) {
@@ -24,6 +26,8 @@ func RegisterHandlers(b *telebot.Bot, db *gorm.DB) {
 	b.Handle(&telebot.InlineButton{Unique: accept}, response(b, db, user.Accepted))
 	b.Handle(&telebot.InlineButton{Unique: decline}, response(b, db, user.Declined))
 	b.Handle(&telebot.InlineButton{Unique: fakeAccept}, response(b, db, user.FakeAccepted))
+	b.Handle(&telebot.InlineButton{Unique: senderInterested}, setInterested(b, db, true))
+	b.Handle(&telebot.InlineButton{Unique: receiverInterested}, setInterested(b, db, false))
 	b.Handle(telebot.OnCallback, requestContact(b, db))
 }
 
@@ -37,7 +41,11 @@ func search(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
 
 		var users []user.User
 
-		err := db.Find(&users, "name like '%"+m.Text+"%'").Error
+		err := db.Find(
+			&users,
+			"id <> ? AND name like '%"+m.Text+"%'",
+			m.Sender.ID,
+		).Error
 		if err != nil {
 			bot.Err(b, m.Sender, err)
 		}
@@ -206,16 +214,81 @@ func response(b *telebot.Bot, db *gorm.DB, status user.Response) func(c *telebot
 				contactUser.UserName,
 			)
 
-			bot.Send(b, receiver, success)
+			bot.Send(b, receiver, success, interestedBtn(userID, true, false))
 
 			if status == user.Accepted {
-				bot.Send(b, c.Sender, success)
+				bot.Send(b, c.Sender, success, interestedBtn(contactID, false, false))
 			}
 
 		case user.Declined:
 			bot.Send(b, receiver, text.ContactRequestDeclined(currentUser.Name))
 
 		case user.None:
+		}
+
+		bot.Respond(b, c, &telebot.CallbackResponse{
+			Text: text.ActionDone,
+		})
+	}
+}
+
+func interestedBtn(dataID int, sender, set bool) *telebot.ReplyMarkup {
+	unique := senderInterested
+	if !sender {
+		unique = receiverInterested
+	}
+
+	btnText := text.ContactSetImportantBtn
+	if set {
+		btnText = "🔥" + btnText
+	}
+
+	return &telebot.ReplyMarkup{InlineKeyboard: [][]telebot.InlineButton{{
+		{
+			Unique: unique,
+			Text:   btnText,
+			Data:   strconv.Itoa(dataID),
+		},
+	}}}
+}
+
+func setInterested(b *telebot.Bot, db *gorm.DB, sender bool) func(c *telebot.Callback) {
+	return func(c *telebot.Callback) {
+		userID := c.Sender.ID
+
+		contactID, has := getContactID(b, c)
+		if !has {
+			return
+		}
+
+		contact := user.Contact{SenderID: userID, ContactID: contactID}
+		if !sender {
+			contact = user.Contact{SenderID: contactID, ContactID: userID}
+		}
+
+		err := db.First(&contact).Error
+		if err != nil {
+			bot.Respond(b, c, &telebot.CallbackResponse{
+				Text: err.Error(),
+			})
+
+			return
+		}
+
+		contact = contact.ToggleInterested(sender)
+
+		err = db.Save(contact).Error
+		if err != nil {
+			bot.Respond(b, c, &telebot.CallbackResponse{
+				Text: err.Error(),
+			})
+
+			return
+		}
+
+		_, err = b.EditReplyMarkup(c.Message, interestedBtn(contactID, sender, contact.Interested(sender)))
+		if err != nil {
+			bot.Err(b, c.Sender, err)
 		}
 
 		bot.Respond(b, c, &telebot.CallbackResponse{

@@ -20,12 +20,14 @@ func NewUser(user *telebot.User) User {
 	}
 }
 
-type Contact struct {
-	SenderID     int `gorm:"primaryKey"`
-	ContactID    int `gorm:"primaryKey"`
-	Response     Response
-	RequestTime  time.Time
-	ResponseTime *time.Time
+type Contact struct { //nolint:maligned // dummy optimization
+	SenderID          int `gorm:"primaryKey"`
+	SenderInterested  bool
+	ContactID         int `gorm:"primaryKey"`
+	ContactInterested bool
+	Response          Response
+	RequestTime       time.Time
+	ResponseTime      *time.Time
 }
 
 func NewContact(firstID int, secondID int) Contact {
@@ -45,6 +47,24 @@ func (c Contact) Respond(status Response) Contact {
 	c.ResponseTime = &now
 
 	return c
+}
+
+func (c Contact) ToggleInterested(sender bool) Contact {
+	if sender {
+		c.SenderInterested = !c.SenderInterested
+	} else {
+		c.ContactInterested = !c.ContactInterested
+	}
+
+	return c
+}
+
+func (c Contact) Interested(sender bool) bool {
+	if sender {
+		return c.SenderInterested
+	}
+
+	return c.ContactInterested
 }
 
 type Response string
