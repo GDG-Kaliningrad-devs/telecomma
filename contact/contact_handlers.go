@@ -2,7 +2,6 @@ package contact
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -121,7 +120,7 @@ func requestContact(b *telebot.Bot, db *gorm.DB) func(c *telebot.Callback) {
 
 		bot.Send(b,
 			&telebot.User{ID: contactID},
-			text.ContactRequest(c.Sender.Username),
+			text.ContactRequest(user.Name(c.Sender), c.Sender.Username),
 			&telebot.ReplyMarkup{
 				InlineKeyboard: [][]telebot.InlineButton{{
 					{
@@ -146,6 +145,7 @@ func requestContact(b *telebot.Bot, db *gorm.DB) func(c *telebot.Callback) {
 
 func response(b *telebot.Bot, db *gorm.DB, accepted bool) func(c *telebot.Callback) {
 	return func(c *telebot.Callback) {
+		currentUser := user.NewUser(c.Sender)
 		userID := c.Sender.ID
 
 		contactID, has := getContactID(b, c)
@@ -184,10 +184,19 @@ func response(b *telebot.Bot, db *gorm.DB, accepted bool) func(c *telebot.Callba
 		receiver := &telebot.User{ID: contactID}
 
 		if accepted {
-			bot.Send(b, c.Sender, text.ContactRequestSuccess)
-			bot.Send(b, receiver, text.ContactRequestSuccess)
+			contactUser := getUserFromRequest(contactID, c.Message.Text)
+
+			success := text.ContactRequestSuccess(
+				currentUser.Name,
+				currentUser.UserName,
+				contactUser.Name,
+				contactUser.UserName,
+			)
+
+			bot.Send(b, c.Sender, success)
+			bot.Send(b, receiver, success)
 		} else {
-			bot.Send(b, receiver, text.ContactRequestDeclined)
+			bot.Send(b, receiver, text.ContactRequestDeclined(currentUser.Name))
 		}
 
 		bot.Respond(b, c, &telebot.CallbackResponse{
@@ -227,14 +236,25 @@ func getContactID(b *telebot.Bot, c *telebot.Callback) (int, bool) {
 
 	userID, err := strconv.Atoi(data[len(data)-1])
 	if err != nil {
-		fmt.Println(c.Data)
-
 		bot.Respond(b, c, &telebot.CallbackResponse{
-			Text: text.ContactRequestNotID,
+			Text: text.ContactRequestWrongData,
 		})
 
 		return 0, false
 	}
 
 	return userID, true
+}
+
+func getUserFromRequest(contactID int, s string) *user.User {
+	split := strings.Split(s, ",")
+
+	name := split[0]
+	username := strings.Split(strings.TrimSpace(split[1]), " ")[0]
+
+	return &user.User{
+		ID:       contactID,
+		Name:     name,
+		UserName: strings.TrimPrefix(username, "@"),
+	}
 }

@@ -7,17 +7,17 @@ import (
 )
 
 type User struct {
-	ID   int // telegram user id
-	Name string
+	ID       int // telegram user id
+	Name     string
+	UserName string
 }
 
-func NewUser(user *telebot.User) (User, error) {
-	name, err := validateName(Name(user))
-	if err != nil {
-		return User{}, err
+func NewUser(user *telebot.User) User {
+	return User{
+		ID:       user.ID,
+		Name:     Name(user),
+		UserName: user.Username,
 	}
-
-	return User{ID: user.ID, Name: name}, nil
 }
 
 type Contact struct {

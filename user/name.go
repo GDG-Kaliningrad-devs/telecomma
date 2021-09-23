@@ -1,7 +1,6 @@
 package user
 
 import (
-	"errors"
 	"strings"
 
 	"gopkg.in/tucnak/telebot.v2"
@@ -9,16 +8,4 @@ import (
 
 func Name(user *telebot.User) string {
 	return strings.Join([]string{user.FirstName, user.LastName}, " ")
-}
-
-func validateName(s string) (string, error) {
-	s = strings.TrimSpace(s)
-
-	if len(strings.Split(s, " ")) != 2 {
-		err := errors.New("должно быть 2 слова как на бейдже")
-
-		return "", err
-	}
-
-	return s, nil
 }

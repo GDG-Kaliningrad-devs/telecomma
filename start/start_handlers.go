@@ -44,20 +44,18 @@ func RegisterHandlers(b *telebot.Bot, db *gorm.DB) {
 			},
 		))
 	})
+
+	b.Handle(text.HowToUseBtn, textResponse(b, text.HowToUse))
+	b.Handle(text.HowToStartBtn, textResponse(b, text.HowToStart))
 }
 
 func register(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
 	return func(m *telebot.Message) {
 		sender := m.Sender
 
-		newUser, err := user.NewUser(m.Sender)
-		if err != nil {
-			bot.Err(b, sender, err)
+		newUser := user.NewUser(m.Sender)
 
-			return
-		}
-
-		err = db.Save(&newUser).Error
+		err := db.Save(&newUser).Error
 		if err != nil {
 			bot.Err(b, sender, err)
 
@@ -83,5 +81,11 @@ func mainKeyboard(secondRow []telebot.ReplyButton) *telebot.ReplyMarkup {
 			},
 			secondRow,
 		},
+	}
+}
+
+func textResponse(b *telebot.Bot, text string) func(m *telebot.Message) {
+	return func(m *telebot.Message) {
+		bot.Send(b, m.Sender, text)
 	}
 }
