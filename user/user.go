@@ -37,12 +37,8 @@ func NewContact(firstID int, secondID int) Contact {
 	}
 }
 
-func (c Contact) Respond(accepted bool) Contact {
-	if accepted {
-		c.Response = Accepted
-	} else {
-		c.Response = Declined
-	}
+func (c Contact) Respond(status Response) Contact {
+	c.Response = status
 
 	now := time.Now()
 
@@ -54,14 +50,15 @@ func (c Contact) Respond(accepted bool) Contact {
 type Response string
 
 const (
-	None     Response = "none"
-	Accepted Response = "accepted"
-	Declined Response = "declined"
+	None         Response = "none"
+	Accepted     Response = "accepted"
+	Declined     Response = "declined"
+	FakeAccepted Response = "fake_accepted"
 )
 
 func (r Response) IsValid() bool {
 	switch r {
-	case None, Accepted, Declined:
+	case None, Accepted, Declined, FakeAccepted:
 		return true
 	}
 

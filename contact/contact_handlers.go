@@ -14,14 +14,16 @@ import (
 )
 
 const (
-	approve = "rapprove"
-	decline = "rdecline"
+	accept     = "rapprove"
+	decline    = "rdecline"
+	fakeAccept = "rfake_accept"
 )
 
 func RegisterHandlers(b *telebot.Bot, db *gorm.DB) {
 	b.Handle(telebot.OnText, search(b, db))
-	b.Handle(&telebot.InlineButton{Unique: approve}, response(b, db, true))
-	b.Handle(&telebot.InlineButton{Unique: decline}, response(b, db, false))
+	b.Handle(&telebot.InlineButton{Unique: accept}, response(b, db, user.Accepted))
+	b.Handle(&telebot.InlineButton{Unique: decline}, response(b, db, user.Declined))
+	b.Handle(&telebot.InlineButton{Unique: fakeAccept}, response(b, db, user.FakeAccepted))
 	b.Handle(telebot.OnCallback, requestContact(b, db))
 }
 
@@ -122,18 +124,27 @@ func requestContact(b *telebot.Bot, db *gorm.DB) func(c *telebot.Callback) {
 			&telebot.User{ID: contactID},
 			text.ContactRequest(user.Name(c.Sender), c.Sender.Username),
 			&telebot.ReplyMarkup{
-				InlineKeyboard: [][]telebot.InlineButton{{
+				InlineKeyboard: [][]telebot.InlineButton{
 					{
-						Unique: approve,
-						Text:   text.ContactRequestApproveBtn,
-						Data:   data,
+						{
+							Unique: accept,
+							Text:   text.ContactRequestApproveBtn,
+							Data:   data,
+						},
+						{
+							Unique: decline,
+							Text:   text.ContactRequestDeclineBtn,
+							Data:   data,
+						},
 					},
 					{
-						Unique: decline,
-						Text:   text.ContactRequestDeclineBtn,
-						Data:   data,
+						{
+							Unique: fakeAccept,
+							Text:   text.ContactRequestFakeAcceptBtn,
+							Data:   data,
+						},
 					},
-				}},
+				},
 			},
 		)
 
@@ -143,7 +154,8 @@ func requestContact(b *telebot.Bot, db *gorm.DB) func(c *telebot.Callback) {
 	}
 }
 
-func response(b *telebot.Bot, db *gorm.DB, accepted bool) func(c *telebot.Callback) {
+// nolint:funlen // refactor priority 3
+func response(b *telebot.Bot, db *gorm.DB, status user.Response) func(c *telebot.Callback) {
 	return func(c *telebot.Callback) {
 		currentUser := user.NewUser(c.Sender)
 		userID := c.Sender.ID
@@ -172,7 +184,7 @@ func response(b *telebot.Bot, db *gorm.DB, accepted bool) func(c *telebot.Callba
 			return
 		}
 
-		err = db.Save(contact.Respond(accepted)).Error
+		err = db.Save(contact.Respond(status)).Error
 		if err != nil {
 			bot.Respond(b, c, &telebot.CallbackResponse{
 				Text: err.Error(),
@@ -183,7 +195,8 @@ func response(b *telebot.Bot, db *gorm.DB, accepted bool) func(c *telebot.Callba
 
 		receiver := &telebot.User{ID: contactID}
 
-		if accepted {
+		switch status {
+		case user.Accepted, user.FakeAccepted:
 			contactUser := getUserFromRequest(contactID, c.Message.Text)
 
 			success := text.ContactRequestSuccess(
@@ -193,10 +206,16 @@ func response(b *telebot.Bot, db *gorm.DB, accepted bool) func(c *telebot.Callba
 				contactUser.UserName,
 			)
 
-			bot.Send(b, c.Sender, success)
 			bot.Send(b, receiver, success)
-		} else {
+
+			if status == user.Accepted {
+				bot.Send(b, c.Sender, success)
+			}
+
+		case user.Declined:
 			bot.Send(b, receiver, text.ContactRequestDeclined(currentUser.Name))
+
+		case user.None:
 		}
 
 		bot.Respond(b, c, &telebot.CallbackResponse{
