@@ -10,7 +10,7 @@ const (
 	SearchErrToManyResults      = `Найдено слишком много, напишите ещё пару символов`
 	ContactRequestSend          = `Запрос отправлен`
 	ContactRequestWrongData     = `Error: wrong contact data. Pls contact org`
-	contactRequest              = `%s, %s хочет сохранить контакт`
+	contactRequest              = `%s, @%s хочет сохранить контакт`
 	ContactRequestApproveBtn    = `Подтвердить`
 	ContactRequestDeclineBtn    = `Отклонить`
 	ContactRequestFakeAcceptBtn = `Притвориться, что подтвердил`
