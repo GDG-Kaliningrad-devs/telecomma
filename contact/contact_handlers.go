@@ -238,7 +238,7 @@ func top(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
 	calculator := statCalculator{}
 
 	return func(m *telebot.Message) {
-		stats, t, err := calculator.top(db, m.ID)
+		stats, t, err := calculator.top(db, m.Sender.ID)
 		if err != nil {
 			bot.Err(b, m.Sender, err)
 

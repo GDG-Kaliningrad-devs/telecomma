@@ -28,8 +28,8 @@ func Test_statCalculator_top(t *testing.T) {
 		return
 	}
 
-	assert.GreaterOrEqual(t, top, 8)
-	assert.LessOrEqual(t, top, 9)
+	assert.GreaterOrEqual(t, len(top), 8)
+	assert.LessOrEqual(t, len(top), 9)
 
 	if len(top) > 1 {
 		assert.True(t, top[0].ContactsCount >= top[1].ContactsCount)
