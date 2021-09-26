@@ -21,14 +21,15 @@ func Test_statCalculator_top(t *testing.T) {
 
 	c := statCalculator{}
 
-	top, resultTime, err := c.top(db)
+	top, resultTime, err := c.top(db, 591615813)
 	assert.NoError(t, err)
 
 	if err != nil {
 		return
 	}
 
-	assert.Len(t, top, 8)
+	assert.GreaterOrEqual(t, top, 8)
+	assert.LessOrEqual(t, top, 9)
 
 	if len(top) > 1 {
 		assert.True(t, top[0].ContactsCount >= top[1].ContactsCount)

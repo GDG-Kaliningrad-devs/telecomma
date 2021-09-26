@@ -4,6 +4,7 @@ type Stat struct {
 	ID               int
 	Name             string
 	UserName         string
+	Place            uint
 	ContactsCount    uint
 	DeclinesCount    uint
 	FakeAcceptsCount uint

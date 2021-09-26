@@ -30,6 +30,7 @@ func RegisterHandlers(b *telebot.Bot, db *gorm.DB) {
 	b.Handle(&telebot.InlineButton{Unique: receiverInterested}, setInterested(b, db, false))
 	b.Handle(telebot.OnCallback, requestContact(b, db))
 	b.Handle("/top", top(b, db))
+	b.Handle("/admin_notify_top_"+flag.AdminPass(), notifyAboutTop(b, db))
 }
 
 func search(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
@@ -237,7 +238,7 @@ func top(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
 	calculator := statCalculator{}
 
 	return func(m *telebot.Message) {
-		stats, t, err := calculator.top(db)
+		stats, t, err := calculator.top(db, m.ID)
 		if err != nil {
 			bot.Err(b, m.Sender, err)
 
@@ -245,6 +246,23 @@ func top(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
 		}
 
 		bot.Send(b, m.Sender, text.Top(stats, t))
+	}
+}
+
+func notifyAboutTop(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
+	calculator := statCalculator{}
+
+	return func(m *telebot.Message) {
+		ids, err := calculator.ids(db)
+		if err != nil {
+			bot.Err(b, m.Sender, err)
+
+			return
+		}
+
+		for _, id := range ids {
+			bot.Send(b, &telebot.User{ID: id}, text.LookAtTop)
+		}
 	}
 }
 

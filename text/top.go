@@ -15,15 +15,18 @@ const (
 Результат на: %s
 
 Успейте попасть в топ до конца конфы`
+	LookAtTop = `Теперь можно посмотреть топ, найди там себя
+
+/top`
 )
 
 func Top(list user.StatList, t time.Time) string {
 	results := ""
 
-	for i, stat := range list {
+	for _, stat := range list {
 		results += fmt.Sprintf(
 			"%d - %s, @%s, знакомств: %d, fakes: %d\n",
-			i+1, stat.Name, stat.UserName, stat.ContactsCount, stat.FakeAcceptsCount,
+			stat.Place, stat.Name, stat.UserName, stat.ContactsCount, stat.FakeAcceptsCount,
 		)
 	}
 

@@ -15,13 +15,58 @@ type statCalculator struct {
 	result          []user.Stat
 }
 
-func (c *statCalculator) top(db *gorm.DB) (result []user.Stat, t time.Time, err error) {
+func (c *statCalculator) ids(db *gorm.DB) ([]int, error) {
+	err := c.assertCalculation(db)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]int, len(c.result))
+
+	for i := range c.result {
+		ids[i] = c.result[i].ID
+	}
+
+	return ids, nil
+}
+
+func (c *statCalculator) top(db *gorm.DB, currentUserID int) (
+	result []user.Stat,
+	t time.Time,
+	err error,
+) {
+	//
+	err = c.assertCalculation(db)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+
+	var personalTop []user.Stat //nolint:prealloc
+
+	for i, stat := range c.result {
+		if i > 7 && stat.ID != currentUserID {
+			continue
+		}
+
+		if stat.ID == currentUserID {
+			stat.Name = "(вы) " + stat.Name
+		}
+
+		stat.Place = uint(i) + 1
+
+		personalTop = append(personalTop, stat)
+	}
+
+	return personalTop, c.calculationTime, nil
+}
+
+func (c *statCalculator) assertCalculation(db *gorm.DB) error {
 	c.m.Lock()
 
 	if time.Since(c.calculationTime) > 5*time.Minute {
-		result, err = fetchStats(db)
+		result, err := fetchStats(db)
 		if err != nil {
-			return result, c.calculationTime, err
+			return err
 		}
 
 		c.result = result
@@ -30,10 +75,10 @@ func (c *statCalculator) top(db *gorm.DB) (result []user.Stat, t time.Time, err 
 
 	c.m.Unlock()
 
-	return c.result, c.calculationTime, nil
+	return nil
 }
 
-//nolint:funlen,cyclop // refactor priority 1:split,optimize
+//nolint:cyclop // refactor priority 1 split,optimize
 func fetchStats(db *gorm.DB) ([]user.Stat, error) {
 	var (
 		contacts []user.Contact
@@ -83,10 +128,6 @@ func fetchStats(db *gorm.DB) ([]user.Stat, error) {
 	}
 
 	sort.Sort(statsSlice)
-
-	if len(statsSlice) > 8 {
-		statsSlice = statsSlice[0:8]
-	}
 
 	var users []user.User
 

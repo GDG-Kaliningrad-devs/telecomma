@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"gdg-kld.ru/telecomma/bot"
 	"gdg-kld.ru/telecomma/contact"
 	"gdg-kld.ru/telecomma/start"
 	"gdg-kld.ru/telecomma/user"
@@ -41,6 +42,9 @@ func main() {
 
 	start.RegisterHandlers(b, db)
 	contact.RegisterHandlers(b, db)
+	b.Handle("/version", func(m *telebot.Message) {
+		bot.Send(b, m.Sender, "1.2.0")
+	})
 
 	b.Start()
 }
