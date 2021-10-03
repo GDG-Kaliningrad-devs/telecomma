@@ -1,11 +1,9 @@
 package user
 
 type Stat struct {
-	ID               int
-	Name             string
-	UserName         string
+	User
 	Place            uint
-	ContactsCount    uint
+	Contacts         []ContactStatus
 	DeclinesCount    uint
 	FakeAcceptsCount uint
 }
@@ -22,34 +20,12 @@ func (s StatList) IDs() []int {
 	return ids
 }
 
-func (s StatList) WithNames(users []User) StatList {
-	for i := range s {
-		stat := s[i]
-
-		stat.Name = "(имя скрыто)"
-		stat.UserName = "?"
-
-		for _, u := range users {
-			if u.ID != stat.ID {
-				continue
-			}
-
-			stat.Name = u.Name
-			stat.UserName = u.UserName
-		}
-
-		s[i] = stat
-	}
-
-	return s
-}
-
 func (s StatList) Len() int {
 	return len(s)
 }
 
 func (s StatList) Less(i, j int) bool {
-	return s[j].ContactsCount < s[i].ContactsCount
+	return len(s[j].Contacts) < len(s[i].Contacts)
 }
 
 func (s StatList) Swap(i, j int) {

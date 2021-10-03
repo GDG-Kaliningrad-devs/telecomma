@@ -90,22 +90,32 @@ func fetchStats(db *gorm.DB) ([]user.Stat, error) {
 		return nil, err
 	}
 
+	var users []user.User
+
+	err = db.Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+
+	userProvider := user.NewProvider(users)
+
 	for _, contact := range contacts {
 		senderStat, ok := stats[contact.SenderID]
 		if !ok {
-			senderStat = user.Stat{ID: contact.SenderID}
+			senderStat = user.Stat{User: userProvider.Get(contact.SenderID)}
 		}
 
 		receiverStat, ok := stats[contact.ContactID]
 		if !ok {
-			receiverStat = user.Stat{ID: contact.ContactID}
+			receiverStat = user.Stat{User: userProvider.Get(contact.ContactID)}
 		}
 
 		switch contact.Response {
 		case user.None:
 		case user.Accepted:
-			senderStat.ContactsCount++
-			receiverStat.ContactsCount++
+			senderStatus, receiverStatus := contact.MatchStatuses(userProvider)
+			senderStat.Contacts = append(senderStat.Contacts, senderStatus)
+			receiverStat.Contacts = append(receiverStat.Contacts, receiverStatus)
 
 		case user.Declined:
 			senderStat.DeclinesCount++
@@ -128,15 +138,6 @@ func fetchStats(db *gorm.DB) ([]user.Stat, error) {
 	}
 
 	sort.Sort(statsSlice)
-
-	var users []user.User
-
-	err = db.Find(&users, statsSlice.IDs()).Error
-	if err != nil {
-		return nil, err
-	}
-
-	statsSlice = statsSlice.WithNames(users)
 
 	return statsSlice, nil
 }

@@ -67,6 +67,28 @@ func (c Contact) Interested(sender bool) bool {
 	return c.ContactInterested
 }
 
+func (c Contact) MatchStatuses(p Provider) (sender, receiver ContactStatus) {
+	sender.User = p.Get(c.ContactID)
+	sender.MatchStatus = Nothing
+
+	receiver.User = p.Get(c.SenderID)
+	receiver.MatchStatus = Nothing
+
+	switch {
+	case c.SenderInterested && c.ContactInterested:
+		sender.MatchStatus = Match
+		receiver.MatchStatus = Match
+
+	case c.SenderInterested:
+		receiver.MatchStatus = InterestedInMe
+
+	case c.ContactInterested:
+		sender.MatchStatus = InterestedInMe
+	}
+
+	return sender, receiver
+}
+
 type Response string
 
 const (
@@ -84,3 +106,16 @@ func (r Response) IsValid() bool {
 
 	return false
 }
+
+type ContactStatus struct {
+	User
+	MatchStatus
+}
+
+type MatchStatus uint8
+
+const (
+	Nothing MatchStatus = iota
+	Match
+	InterestedInMe
+)

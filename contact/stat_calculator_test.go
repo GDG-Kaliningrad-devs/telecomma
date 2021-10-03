@@ -32,8 +32,8 @@ func Test_statCalculator_top(t *testing.T) {
 	assert.LessOrEqual(t, len(top), 9)
 
 	if len(top) > 1 {
-		assert.True(t, top[0].ContactsCount >= top[1].ContactsCount)
-		assert.NotEqual(t, 0, top[0].ContactsCount)
+		assert.True(t, len(top[0].Contacts) >= len(top[1].Contacts))
+		assert.NotEqual(t, 0, len(top[0].Contacts))
 	}
 
 	for _, stat := range top {

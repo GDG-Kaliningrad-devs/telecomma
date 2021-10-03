@@ -26,7 +26,7 @@ func Top(list user.StatList, t time.Time) string {
 	for _, stat := range list {
 		results += fmt.Sprintf(
 			"%d - %s, @%s, знакомств: %d, fakes: %d\n",
-			stat.Place, stat.Name, stat.UserName, stat.ContactsCount, stat.FakeAcceptsCount,
+			stat.Place, stat.Name, stat.UserName, len(stat.Contacts), stat.FakeAcceptsCount,
 		)
 	}
 
