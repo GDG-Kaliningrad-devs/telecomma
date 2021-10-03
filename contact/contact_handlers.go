@@ -31,6 +31,7 @@ func RegisterHandlers(b *telebot.Bot, db *gorm.DB) {
 	b.Handle(telebot.OnCallback, requestContact(b, db))
 	b.Handle("/top", top(b, db))
 	b.Handle("/admin_notify_top_"+flag.AdminPass(), notifyAboutTop(b, db))
+	b.Handle("/admin_notify_final_"+flag.AdminPass(), sendFinalNotification(b, db))
 }
 
 func search(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
@@ -262,6 +263,21 @@ func notifyAboutTop(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
 
 		for _, id := range ids {
 			bot.Send(b, &telebot.User{ID: id}, text.LookAtTop)
+		}
+	}
+}
+
+func sendFinalNotification(b *telebot.Bot, db *gorm.DB) func(m *telebot.Message) {
+	calculator := statCalculator{}
+
+	return func(m *telebot.Message) {
+		err := calculator.assertCalculation(db)
+		if err != nil {
+			bot.Err(b, m.Sender, err)
+		}
+
+		for _, stat := range calculator.result {
+			bot.Send(b, &telebot.User{ID: stat.ID}, text.Final(stat.Contacts))
 		}
 	}
 }

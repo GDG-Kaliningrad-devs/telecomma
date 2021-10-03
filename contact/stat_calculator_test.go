@@ -41,4 +41,6 @@ func Test_statCalculator_top(t *testing.T) {
 	}
 
 	log.Println(text.Top(top, resultTime))
+
+	log.Println(text.Final(top[0].Contacts))
 }

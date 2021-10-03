@@ -1,6 +1,7 @@
 package user
 
 import (
+	"fmt"
 	"time"
 
 	"gopkg.in/tucnak/telebot.v2"
@@ -18,6 +19,15 @@ func NewUser(user *telebot.User) User {
 		Name:     Name(user),
 		UserName: user.Username,
 	}
+}
+
+func (u User) String() string {
+	userName := u.UserName
+	if userName == "" {
+		userName = "(неотображаемые символы)"
+	}
+
+	return fmt.Sprintf("%s, @%s", u.Name, userName)
 }
 
 type Contact struct { //nolint:maligned // dummy optimization

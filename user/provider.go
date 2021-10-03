@@ -16,7 +16,7 @@ func (p provider) Get(id int) User {
 
 	return User{
 		ID:       id,
-		Name:     "(имя не указано)",
+		Name:     "(пользователь скрыл себя)",
 		UserName: "?",
 	}
 }
