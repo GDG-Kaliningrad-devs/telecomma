@@ -43,7 +43,7 @@ func main() {
 	start.RegisterHandlers(b, db)
 	contact.RegisterHandlers(b, db)
 	b.Handle("/version", func(m *telebot.Message) {
-		bot.Send(b, m.Sender, "1.2.1")
+		bot.Send(b, m.Sender, "1.3.0")
 	})
 
 	b.Start()
